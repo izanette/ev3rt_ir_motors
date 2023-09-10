@@ -1,5 +1,5 @@
 /**
- * This sample program runs motors A & D for 5 seconds.
+ * This sample program runs motors A, B, C & D using a IR Remote control on channels 1 & 2.
  *
  */
 
@@ -18,14 +18,11 @@
 #define MINVAL(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define MAXVAL(X, Y)  ((X) > (Y) ? (X) : (Y))
 
-/**
- * Left motor:   Port A
- * Right motor:  Port D
- * Touch sensor: Port 1
- */
-const int left_motor   = EV3_PORT_A;
-const int right_motor  = EV3_PORT_D;
-const int touch_sensor = EV3_PORT_1;
+const int x_motor   = EV3_PORT_A;
+const int y_motor   = EV3_PORT_D;
+const int z_motor   = EV3_PORT_B;
+const int c_motor   = EV3_PORT_C;
+const int ir_sensor = EV3_PORT_1;
 
 void motor(int m, int power)
 {
@@ -33,18 +30,6 @@ void motor(int m, int power)
         ev3_motor_set_power(m, power);
     else
         ev3_motor_stop(m, false);
-}
-
-void motors(int left_power, int right_power)
-{
-    // Start motors
-    motor(left_motor,  -left_power);
-    motor(right_motor, -right_power);
-    
-    if (left_power || right_power)
-        ev3_led_set_color(LED_GREEN);
-    else
-        ev3_led_set_color(LED_RED);
 }
 
 void wait_no_button_pressed()
@@ -66,41 +51,77 @@ void wait_no_button_pressed()
 
 void control()
 {
-    // Draw information
-    lcdfont_t font = EV3_FONT_MEDIUM;
-    ev3_lcd_set_font(font);
-    int32_t fontw, fonth;
-    ev3_font_get_size(font, &fontw, &fonth);
-    char lcdstr[100];
-    const char* lcdclean = "                    ";
-    
-    int speed = 0;
-    int prevSpeed = 0;
     while (1)
     {
-        prevSpeed = speed;
-        if (ev3_button_is_pressed(UP_BUTTON))
-            speed = MINVAL(100, speed + 10);
-        else if (ev3_button_is_pressed(DOWN_BUTTON))
-            speed = MAXVAL(-100, speed - 10);
-        else if (ev3_button_is_pressed(ENTER_BUTTON))
-            speed = 0;
-        else if (ev3_touch_sensor_is_pressed(touch_sensor))
+        ir_remote_t val = ev3_infrared_sensor_get_remote(ir_sensor);
+        for(int c = 0; c < 2; c++)
         {
-            //while(ev3_touch_sensor_is_pressed(touch_sensor));
-            speed = 0;
-        }
-        
-        if (speed != prevSpeed)
-        {
-            motors(speed, speed);
-            sprintf(lcdstr, "Speed = %d   ", speed);
-            ev3_lcd_draw_string(lcdclean, 0, fonth * 3);
-            ev3_lcd_draw_string(lcdstr, 0, fonth * 3);
+            int redup    = (val.channel[c] & IR_RED_UP_BUTTON);
+            int reddown  = (val.channel[c] & IR_RED_DOWN_BUTTON);
+            int blueup   = (val.channel[c] & IR_BLUE_UP_BUTTON);
+            int bluedown = (val.channel[c] & IR_BLUE_DOWN_BUTTON);
             
-            wait_no_button_pressed();
+            if (c == 0) // x and y motors
+            {
+                // x motor
+                if (redup)
+                {
+                    motor(x_motor, 10);
+                }
+                else if (reddown)
+                {
+                    motor(x_motor, -10);
+                }
+                else
+                {
+                    motor(x_motor, 0);
+                }
+                
+                // y motor
+                if (blueup)
+                {
+                    motor(y_motor, 10);
+                }
+                else if (bluedown)
+                {
+                    motor(y_motor, -10);
+                }
+                else
+                {
+                    motor(y_motor, 0);
+                }
+            }
+            else // z and c motors
+            {
+                // z motor
+                if (redup)
+                {
+                    motor(z_motor, -10);
+                }
+                else if (reddown)
+                {
+                    motor(z_motor, 10);
+                }
+                else
+                {
+                    motor(z_motor, 0);
+                }
+                
+                // c motor
+                if (blueup)
+                {
+                    motor(c_motor, -10);
+                }
+                else if (bluedown)
+                {
+                    motor(c_motor, 10);
+                }
+                else
+                {
+                    motor(c_motor, 0);
+                }
+            }
         }
-        
         // wait 10 mili-seconds
         tslp_tsk(10);
     }
@@ -115,18 +136,23 @@ void main_task(intptr_t unused)
     ev3_font_get_size(font, &fontw, &fonth);
     char lcdstr[100];
     ev3_lcd_draw_string("App: Run Motor", 0, 0);
-    sprintf(lcdstr, "Port%c:Left motor", 'A' + left_motor);
+    sprintf(lcdstr, "Port%c:X motor", 'A' + x_motor);
     ev3_lcd_draw_string(lcdstr, 0, fonth * 1);
-    sprintf(lcdstr, "Port%c:Right motor", 'A' + right_motor);
+    sprintf(lcdstr, "Port%c:Y motor", 'A' + y_motor);
     ev3_lcd_draw_string(lcdstr, 0, fonth * 2);
+    sprintf(lcdstr, "Port%c:Z motor", 'A' + z_motor);
+    ev3_lcd_draw_string(lcdstr, 0, fonth * 3);
+    sprintf(lcdstr, "Port%c:C motor", 'A' + c_motor);
+    ev3_lcd_draw_string(lcdstr, 0, fonth * 4);
 
     // Configure motors
-    ev3_motor_config(left_motor, LARGE_MOTOR);
-    ev3_motor_config(right_motor, LARGE_MOTOR);
+    ev3_motor_config(x_motor, LARGE_MOTOR);
+    ev3_motor_config(y_motor, LARGE_MOTOR);
+    ev3_motor_config(z_motor, LARGE_MOTOR);
+    ev3_motor_config(c_motor, MEDIUM_MOTOR);
     
     // Configure sensors
-    //ev3_sensor_config(ir_sensor, ULTRASONIC_SENSOR);
-    ev3_sensor_config(touch_sensor, TOUCH_SENSOR);
+    ev3_sensor_config(ir_sensor, INFRARED_SENSOR);
 
     control();
 }
