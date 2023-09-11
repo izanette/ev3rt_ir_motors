@@ -18,13 +18,13 @@
 #define MINVAL(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define MAXVAL(X, Y)  ((X) > (Y) ? (X) : (Y))
 
-const int x_motor   = EV3_PORT_A;
-const int y_motor   = EV3_PORT_D;
-const int z_motor   = EV3_PORT_B;
-const int c_motor   = EV3_PORT_C;
-const int ir_sensor = EV3_PORT_1;
+const motor_port_t x_motor   = EV3_PORT_A;
+const motor_port_t y_motor   = EV3_PORT_D;
+const motor_port_t z_motor   = EV3_PORT_B;
+const motor_port_t c_motor   = EV3_PORT_C;
+const sensor_port_t ir_sensor = EV3_PORT_1;
 
-void motor(int m, int power)
+void motor(motor_port_t m, int power)
 {
     if (power)
         ev3_motor_set_power(m, power);
@@ -42,7 +42,7 @@ void wait_no_button_pressed()
         int stop = 1;
         for(int i = 0; i < 6; i++)
         {
-            if (ev3_button_is_pressed(i))
+            if (ev3_button_is_pressed((button_t)i))
                 stop = 0;
         }
         if (stop) break;
